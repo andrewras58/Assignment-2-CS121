@@ -2,31 +2,29 @@ import re
 from urllib.parse import urlparse
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
+from collections import defaultdict
 import nltk
 nltk.download('punkt')
 
 Blacklist = set()
 Visited = set()
 Stop_Words = {"a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"}
-Longest_Page = ()
-Common_Words = {}
+Longest_Page = ('Default', 0)
+Common_Words = defaultdict(int)
 
 #writes to txt file, the current 50 most common words
 def common_words_write():
-    counter = 0
-    f = open("common_words_log.txt", "a")
-    for (k,v) in sorted(Common_Words.items(), key = lambda kv:kv[1], reverse = True):
-        if(counter < 50):
-            counter+=1
-            f.write(f'{counter:02}. (Word = {k}, Word-Count = {v})\n')
-        else: break
-    f.write('------ break------\n')
-    f.close()
-#writes to a txt file the longest page along with its word count 
+    global Common_Words
+    with open("common_words_log.txt", "a") as f:
+        for count, kv in enumerate(sorted(Common_Words.items(), key=(lambda x: x[1]), reverse=True)[:50]):
+            f.write(f'{count:02}. (Word = {kv[0]}, Word-Count = {kv[1]})\n')
+        f.write('------ break------\n')
+
+#writes to a txt file the longest page along with its word count
 def longest_page_write():
-    f = open("longest_page_log.txt", "a")
-    f.write('(Word-Count = {}; URL = {})\n'.format(Longest_Page[1], Longest_Page[0]))
-    f.close()
+    global Longest_Page
+    with open("longest_page_log.txt", "a") as f:
+        f.write('(Word-Count = {}; URL = {})\n'.format(Longest_Page[1], Longest_Page[0]))
 
 def unique_pages_write():
     return
@@ -35,9 +33,9 @@ def scraper(url, resp) -> list:
     links = extract_next_links(url, resp)
     valid_links = [link for link in links if is_valid(link)]
     if resp.status == 200:
-        word_token_list = tokenize_response(resp) #gather all tokens from webpage
-        check_longest_page(url, len(word_token_list)) #check if Longest_Page needs to be updated
-        compute_word_frequencies(word_token_list) #find frequencies of each token and insert into Common_Words
+        word_token_list = tokenize_response(resp)       # gather all tokens from webpage
+        check_longest_page(url, len(word_token_list))   # check if Longest_Page needs to be updated
+        compute_word_frequencies(word_token_list)       # find frequencies of each token and insert into Common_Words
         #print(Common_Words)
         #print(Longest_Page)
         common_words_write()
@@ -49,32 +47,22 @@ def tokenize_response(resp):
     content = resp.raw_response.content
     soup = BeautifulSoup(content, "html.parser")
     tokens = nltk.tokenize.word_tokenize(soup.get_text()) # uses nltk to tokenize webpage
-    word_tokens = [t for t in tokens if not re.match('[\W]+', t)]
+    word_tokens = [t for t in tokens if not re.match(r'[\W]+', t)]
     return word_tokens
 
 # assign new value to Longest_Page if current page is longer
-def check_longest_page(url, word_token_list_len):
+def check_longest_page(url, page_len):
     global Longest_Page
-    if Longest_Page and Longest_Page[1] < word_token_list_len:
-        Longest_Page = (url, word_token_list_len)
-    elif not Longest_Page:
-        Longest_Page = (url, word_token_list_len)
+    if Longest_Page[1] < page_len:
+        Longest_Page = (url, page_len)
 
 # increment word count in Common_Words for all words found on this page
-def compute_word_frequencies(tokenList):
-    # for loop which adds count to Common_Words dictionary 
-    global Common_Words
-    for token in tokenList:
-        if token in Common_Words:
+def compute_word_frequencies(tokens):
+    # for loop which adds count to Common_Words dictionary
+    global Common_Words, Stop_Words
+    for token in tokens:
+        if token not in Stop_Words:
             Common_Words[token] += 1
-        elif token not in Common_Words and not in_stop_words(token): # checks to see if token is a stop word if it has not been added to Common_Words
-            Common_Words[token] = 1
-
-# returns true if a word is a stop word otherwise returns False
-def in_stop_words(token):
-    if token in Stop_Words:
-        return True
-    return False
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -86,28 +74,24 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    nextLinks = set()
-    global Blacklist
-    global Visited
-
-    #temporary
-    #if resp.status != 200:
-    #    print(resp.status + resp.error)
+    global Blacklist, Visited
 
     # If status is bad or link already visited add it to a blacklist to avoid
     if resp.status != 200 or url in Blacklist or url in Visited:
         Blacklist.add(url)
         return set()
 
+    nextLinks = set()
+
     soup = BeautifulSoup(resp.raw_response.content, "html.parser")
     for link in soup.find_all('a'):
         href = link.attrs.get('href')
 
         # If link is relative make it absolute
-        if bool(urlparse(url).netloc):
+        if urlparse(url).netloc:
             href = urljoin(url, href)
 
-        # Stop duplicates of same link by splitting 
+        # Stop duplicates of same link by splitting
         # (ex #ref40, #ref45 etc of same link)
         # not sure if including '?' is necessary, neef further testing
         href = href.split('#')[0]
@@ -122,11 +106,10 @@ def extract_next_links(url, resp):
     return nextLinks
 
 def is_valid(url):
-    # Decide whether to crawl this url or not. 
+    # Decide whether to crawl this url or not.
     # If you decide to crawl it, return True; otherwise return False.
     # There are already some conditions that return False.
-    global Visited
-    global Blacklist
+    global Blacklist, Visited
 
     if url in Visited or url in Blacklist:
         return False
