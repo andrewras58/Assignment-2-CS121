@@ -15,16 +15,17 @@ Common_Words = defaultdict(int)
 #writes to txt file, the current 50 most common words
 def common_words_write():
     global Common_Words
-    with open("common_words_log.txt", "a") as f:
+    with open("common_words_log.txt", "w") as f:
+        file_string = ''
         for count, kv in enumerate(sorted(Common_Words.items(), key=(lambda x: x[1]), reverse=True)[:50]):
-            f.write(f'{count:02}. (Word = {kv[0]}, Word-Count = {kv[1]})\n')
-        f.write('------ break------\n')
+            file_string += f'{count+1:02}. (Word = {kv[0]}, Word-Count = {kv[1]})\n'
+        f.write(file_string)
 
 #writes to a txt file the longest page along with its word count
 def longest_page_write():
     global Longest_Page
-    with open("longest_page_log.txt", "a") as f:
-        f.write('(Word-Count = {}; URL = {})\n'.format(Longest_Page[1], Longest_Page[0]))
+    with open("longest_page_log.txt", "w") as f:
+        f.write(f'(Word-Count = {Longest_Page[1]}; URL = {Longest_Page[0]})\n')
 
 def unique_pages_write():
     return
