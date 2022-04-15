@@ -11,6 +11,26 @@ Stop_Words = {"a", "about", "above", "after", "again", "against", "all", "am", "
 Longest_Page = ()
 Common_Words = {}
 
+#writes to txt file, the current 50 most common words
+def common_words_write():
+    counter = 0
+    f = open("common_words_log.txt", "a")
+    for (k,v) in sorted(Common_Words.items(), key = lambda kv:kv[1], reverse = True):
+        if(counter < 50):
+            counter+=1
+            f.write(f'{counter:02}. (Word = {k}, Word-Count = {v})\n')
+        else: break
+    f.write('------ break------\n')
+    f.close()
+#writes to a txt file the longest page along with its word count 
+def longest_page_write():
+    f = open("longest_page_log.txt", "a")
+    f.write('(Word-Count = {}; URL = {})\n'.format(Longest_Page[1], Longest_Page[0]))
+    f.close()
+
+def unique_pages_write():
+    return
+
 def scraper(url, resp) -> list:
     links = extract_next_links(url, resp)
     valid_links = [link for link in links if is_valid(link)]
@@ -20,6 +40,8 @@ def scraper(url, resp) -> list:
         compute_word_frequencies(word_token_list) #find frequencies of each token and insert into Common_Words
         #print(Common_Words)
         #print(Longest_Page)
+        common_words_write()
+        longest_page_write()
     return valid_links
 
 # get data from website and tokenize it taking out everything that isn't a word
