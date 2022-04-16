@@ -168,3 +168,15 @@ def search_hashes(hashes: [int], query: int) -> (int, int):
 # checks to see how similar the number is and returns True or False based on a given threshold
 def hash_similarity(query: int, sim_pair: (int, int), threshold: float) -> bool:
     return 1-abs(sim_pair[0]-query)/query > threshold or 1-abs(sim_pair[1]-query)/query > threshold
+
+# A modified version of selection sort that only puts the newest element where it needs to be
+# Code edited from: https://www.geeksforgeeks.org/python-program-for-insertion-sort/
+def insert_to_hashes(hashes: [int], new_hash: int) -> None:
+    hashes.append(new_hash)
+    i = len(hashes) - 1
+    j = i - 1
+    key = hashes[i]
+    while j >= 0 and key < hashes[j]:
+        hashes[j+1] = hashes[j]
+        j -= 1
+    hashes[j+1] = key
