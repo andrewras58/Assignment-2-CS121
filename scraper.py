@@ -151,3 +151,20 @@ def is_valid(url):
             + r"img|sql)$", parsed.path.lower()):
         return False
     return True
+
+# Binary search to find the 2 most similar hashes in a sorted list
+# Code edited from: https://www.tutorialspoint.com/python-program-to-implement-binary-search-without-recursion
+def search_hashes(hashes: [int], query: int) -> (int, int):
+    low = 0
+    high = len(hashes) - 1
+    while low <= high:
+        mid = (high + low) // 2
+        if hashes[mid] < query:
+            low = mid + 1
+        elif hashes[mid] > query:
+            high = mid - 1
+    return hashes[low], hashes[high]
+
+# checks to see how similar the number is and returns True or False based on a given threshold
+def hash_similarity(query: int, sim_pair: (int, int), threshold: float) -> bool:
+    return 1-abs(sim_pair[0]-query)/query > threshold or 1-abs(sim_pair[1]-query)/query > threshold
