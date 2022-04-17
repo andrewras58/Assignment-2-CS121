@@ -190,20 +190,19 @@ def create_simhash(resp):
     sortFreq = OrderedDict(sorted(freq.items(), key=lambda kv: kv[1], reverse=True))
 
     # get set of keys to convert to hex and store in list
-    wordSet = sortFreq.keys()
-    wordSet = list(wordSet)
+    wordSet = list(sortFreq.keys())
 
     hashList = list()
     binList = list()
 
     # Convert each word to hex and store
     for word in wordSet:
-        hashList.insert(len(hashList), hashlib.sha1(word.encode()).hexdigest())
+        hashList.append(hashlib.sha1(word.encode()).hexdigest())
 
     # Convert each hex into 160 bit binary string and store
     for h in hashList:
         binary = bin(int(h, 16))
-        binList.insert(len(binList), binary[2:].zfill(160))
+        binList.append(binary[2:].zfill(160))
     
     weightList = list()
 
@@ -213,15 +212,12 @@ def create_simhash(resp):
         num = 0
         for binNum in binList:
             binary = binNum[pos]
-            if binary == '1':
-                num += weight
-            else:
-                num -= weight
+            num += weight if binary == '1' else -weight
     
-        weightList.insert(len(weightList), num)
+        weightList.append(num)
 
     # Reverse list
-    weightList = list(reversed(weightList))
+    weightList = reversed(weightList)
 
     #convert from weightList to the simhash
     simhash = np.zeros((160,), dtype=int)
