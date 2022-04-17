@@ -224,12 +224,9 @@ def create_simhash(resp):
     weightList = list(reversed(weightList))
 
     #convert from weightList to the simhash
-    simhash = list()
-    for w in weightList:
-        if w >= 0:
-            simhash.insert(len(simhash), 1)
-        else:
-            simhash.insert(len(simhash), 0)
+    simhash = np.zeros((160,), dtype=int)
+    for i, w in enumerate(weightList):
+        simhash[i] = 1 if w >= 0 else 0
 
     # Take the simash in list and return as string
     simStr = [str(int) for int in simhash]
