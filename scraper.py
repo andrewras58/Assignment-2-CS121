@@ -228,7 +228,4 @@ def create_simhash(resp):
     for i, w in enumerate(weightList):
         simhash[i] = 1 if w >= 0 else 0
 
-    # Take the simash in list and return as string
-    simStr = [str(int) for int in simhash]
-    finalHash = ''.join(simStr)
-    return(finalHash)
+    return(simhash)
