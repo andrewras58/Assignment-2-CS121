@@ -1,6 +1,7 @@
 import re
 import nltk
 import hashlib
+import numpy as np
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -156,7 +157,7 @@ def is_valid(url):
 
 
 def hamming_distance(hash1, hash2):
-    return sum(h1 == h2 for h1, h2 in zip(hash1, hash2)) / 160
+    return len(np.where(hash1 == hash2)[0]) / 160
 
 def create_simhash(resp):
     #tokenize
