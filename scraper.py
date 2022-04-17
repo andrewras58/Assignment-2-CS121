@@ -151,7 +151,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"img|sql)$", parsed.path.lower()):
+            + r"|img|sql)$", parsed.path.lower()):
         return False
     return True
 
