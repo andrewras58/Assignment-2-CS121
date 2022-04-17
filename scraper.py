@@ -1,9 +1,11 @@
 import re
-from urllib.parse import urlparse
-from urllib.parse import urljoin
-from bs4 import BeautifulSoup
-from collections import defaultdict
 import nltk
+import hashlib
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from urllib.parse import urlparse
+from collections import defaultdict
+from collections import OrderedDict
 nltk.download('punkt')
 
 Blacklist = set()
@@ -151,3 +153,64 @@ def is_valid(url):
             + r"img|sql)$", parsed.path.lower()):
         return False
     return True
+
+
+def hamming_distance(hash1, hash2):
+    return sum(h1 == h2 for h1, h2 in zip(hash1, hash2)) / 160
+
+def create_simhash(resp):
+    #tokenize
+    tokens = tokenize_response(resp)
+
+    # convert to dictionary with frequency sorted by key
+    freq = defaultdict(int)
+    for t in tokens:
+        freq[t] += 1
+    sortFreq = OrderedDict(sorted(freq.items(), key=lambda kv: kv[1], reverse=True))
+
+    # get set of keys to convert to hex and store in list
+    wordSet = sortFreq.keys()
+    wordSet = list(wordSet)
+
+    hashList = list()
+    binList = list()
+
+    # Convert each word to hex and store
+    for word in wordSet:
+        hashList.insert(len(hashList), hashlib.sha1(word.encode()).hexdigest())
+
+    # Convert each hex into 160 bit binary string and store
+    for h in hashList:
+        binary = bin(int(h, 16))
+        binList.insert(len(binList), binary[2:].zfill(160))
+    
+    weightList = list()
+
+    for pos in range(160):
+        # Get the weight to calculate
+        weight = sortFreq[wordSet[pos]]
+        num = 0
+        for binNum in binList:
+            binary = binNum[pos]
+            if binary == '1':
+                num += weight
+            else:
+                num -= weight
+    
+        weightList.insert(len(weightList), num)
+
+    # Reverse list
+    weightList = list(reversed(weightList))
+
+    #convert from weightList to the simhash
+    simhash = list()
+    for w in weightList:
+        if w >= 0:
+            simhash.insert(len(simhash), 1)
+        else:
+            simhash.insert(len(simhash), 0)
+
+    # Take the simash in list and return as string
+    simStr = [str(int) for int in simhash]
+    finalHash = ''.join(simStr)
+    return(finalHash)
