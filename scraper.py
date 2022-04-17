@@ -14,6 +14,7 @@ Visited = set()
 Stop_Words = {"a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"}
 Longest_Page = ('Default', 0)
 Common_Words = defaultdict(int)
+Subdomain = defaultdict(int) # {key = Subdomains under ics.uci.edu domain, value = a counter of unique Pages}
 
 #writes to txt file, the current 50 most common words
 def common_words_write():
@@ -30,8 +31,24 @@ def longest_page_write():
     with open("longest_page_log.txt", "w") as f:
         f.write(f'(Word-Count = {Longest_Page[1]}; URL = {Longest_Page[0]})\n')
 
-def unique_pages_write():
-    return
+#writes to txt file the current subdomain list
+def subdomain_list_write():
+    global Subdomain
+    with open("subdomain_list.txt", "w") as f:
+        file_string = ''
+        for kv in sorted(Subdomain):
+            file_string += f'{kv}, {Subdomain[kv]}\n'
+        f.write(file_string)
+
+#this will update subdomain dict per url
+#we do not need to check for unique url because it is used in extract_next_links
+def subdomain_update(url):
+    global Subdomain
+    if(url.find(".ics.uci.edu") == -1):
+        return
+    pattern = 'https?://(.*)\.ics\.uci\.edu'
+    subdomain_str = re.search(pattern, url).group(1)
+    Subdomain['http://' + subdomain_str + '.ics.uci.edu'] +=1
 
 def scraper(url, resp) -> list:
     links = extract_next_links(url, resp)
@@ -44,6 +61,7 @@ def scraper(url, resp) -> list:
         #print(Longest_Page)
         common_words_write()
         longest_page_write()
+        subdomain_list_write()
     return valid_links
 
 # get data from website and tokenize it taking out everything that isn't a word
@@ -84,6 +102,8 @@ def extract_next_links(url, resp):
     if resp.status != 200 or url in Blacklist or url in Visited:
         Blacklist.add(url)
         return set()
+
+    subdomain_update(url) #added here to so we can avoid checking if unique
 
     nextLinks = set()
 
