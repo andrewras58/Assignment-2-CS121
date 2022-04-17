@@ -245,4 +245,4 @@ def create_simhash(resp):
     for i, w in enumerate(weightList):
         simhash[i] = 1 if w >= 0 else 0
 
-    return(simhash)
+    return simhash
