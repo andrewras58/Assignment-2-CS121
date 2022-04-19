@@ -1,7 +1,6 @@
 import re
 import nltk
 import hashlib
-import numpy as np
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -11,6 +10,8 @@ nltk.download('punkt')
 
 Blacklist = set()
 Visited = set()
+Robots_txt = {}
+Simhashes = list()
 Stop_Words = {"a", "about", "above", "after", "again", "against", "all", "am",
     "an", "and", "any", "are", "aren't", "as", "at", "be", "because", "been", 
     "before", "being", "below", "between", "both", "but", "by", "can't", 
@@ -77,8 +78,7 @@ def scraper(url, resp) -> list:
         word_token_list = tokenize_response(resp)       # gather all tokens from webpage
         check_longest_page(url, len(word_token_list))   # check if Longest_Page needs to be updated
         compute_word_frequencies(word_token_list)       # find frequencies of each token and insert into Common_Words
-        #print(Common_Words)
-        #print(Longest_Page)
+        
         common_words_write()
         longest_page_write()
         subdomain_list_write()
@@ -86,8 +86,7 @@ def scraper(url, resp) -> list:
 
 # get data from website and tokenize it taking out everything that isn't a word
 def tokenize_response(resp):
-    content = resp.raw_response.content
-    soup = BeautifulSoup(content, "html.parser")
+    soup = BeautifulSoup(resp.raw_response.content, "html.parser")
     tokens = nltk.tokenize.word_tokenize(soup.get_text()) # uses nltk to tokenize webpage
     word_tokens = [t for t in tokens if not re.match(r'[\W]+', t)]
     return word_tokens
@@ -107,7 +106,6 @@ def compute_word_frequencies(tokens):
             Common_Words[token] += 1
 
 def extract_next_links(url, resp):
-    # Implementation required.
     # url: the URL that was used to get the page
     # resp.url: the actual url of the page
     # resp.status: the status code returned by the server. 200 is OK, you got the page. Other numbers mean that there was some kind of problem.
@@ -115,19 +113,46 @@ def extract_next_links(url, resp):
     # resp.raw_response: this is where the page actually is. More specifically, the raw_response has two parts:
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
-    # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    global Blacklist, Visited
+    global Blacklist, Visited, Robots_txt, Simhashes
 
     # If status is bad or link already visited add it to a blacklist to avoid
     if resp.status != 200 or url in Blacklist or url in Visited:
         Blacklist.add(url)
         return set()
 
-    subdomain_update(url) #added here to so we can avoid checking if unique
+    subdomain_update(url) #added here so we can avoid checking if unique
+
+    # If tokens < 100 dont continue checking link
+    if wordcount_check(resp):
+        Blacklist.add(url)
+        return set()
+
+    # Create fingerprint for page
+    simhash = create_simhash(resp)
+
+    # If exact simhash is already stored we've already crawled a copy of this page
+    if simhash in Simhashes:
+        Blacklist.add(url)
+        return set()
+    # Else check for similarity in all stored simhashes
+    # If threshold > 0.95 the page is too similar and we should skip
+    else:
+        try:
+            sim = max(simililarity(simhash, s) for s in Simhashes)
+            if sim >= 0.95:
+                Simhashes.append(simhash)
+                blacklist.add(url)
+                return set()
+        except:
+            Simhashes.append(simhash)
+
+    if simhash not in Simhashes:
+        Simhashes.append(simhash)
 
     nextLinks = set()
 
     soup = BeautifulSoup(resp.raw_response.content, "html.parser")
+
     for link in soup.find_all('a'):
         href = link.attrs.get('href')
 
@@ -196,8 +221,8 @@ def is_valid(url):
     return True
 
 
-def hamming_distance(hash1, hash2):
-    return len(np.where(hash1 == hash2)[0]) / 160
+def simililarity(hash1, hash2):
+    return sum(h1 == h2 for h1, h2 in zip(hash1, hash2)) / 160
 
 def create_simhash(resp):
     #tokenize
@@ -241,8 +266,35 @@ def create_simhash(resp):
     weightList = reversed(weightList)
 
     #convert from weightList to the simhash
-    simhash = np.zeros((160,), dtype=int)
-    for i, w in enumerate(weightList):
-        simhash[i] = 1 if w >= 0 else 0
+    simhash = list()
+    for w in weightList:
+        if w >= 0:
+            simhash.append(1)
+        else:
+            simhash.append(0)
 
-    return simhash
+    # Take the simash in list and return as string
+    simStr = [str(int) for int in simhash]
+    finalHash = ''.join(simStr)
+    return(finalHash)
+
+
+# Return True (to enter into if statement to skip link) 
+# if token count less than 100
+def wordcount_check(resp):
+    word_tokens = tokenize_response(resp)
+    if len(word_tokens) < 100:
+        return True
+    return False
+
+
+'''
+def robots_check(resp, parsed):
+    try:
+        rp = urllib.robotparser.RobotFileParser()
+        rp.set_url('http://' + parsed.netloc + '/robots.txt')
+        rp.read()
+        return rp.can_fetch("*", netloc)
+    except:
+        return False
+'''
