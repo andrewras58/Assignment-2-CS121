@@ -232,7 +232,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|rss|c|tex.Z|bib.Z|pps|bib)$", parsed.path.lower()):
+            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|rss|c|tex.Z|bib.Z|pps|bib|ppsx)$", parsed.path.lower()):
             # .bib? 
         return False
     return True
