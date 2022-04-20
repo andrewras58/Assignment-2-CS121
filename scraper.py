@@ -193,12 +193,10 @@ def is_valid(url):
         return False
 
     # Make sure link is in provided domain constraints
-    if ".ics.uci.edu" not in parsed.netloc or ".cs.uci.edu" not in parsed.netloc or".informatics.uci.edu" not in parsed.netloc or".stat.uci.edu" not in parsed.netloc or ".today.uci.edu" not in parsed.netloc:
-    #if parsed.netloc not in {"www.ics.uci.edu", "www.cs.uci.edu", "www.informatics.uci.edu", "www.stat.uci.edu", "www.today.uci.edu"}:
+    if parsed.netloc not in {"www.ics.uci.edu", "www.cs.uci.edu", "www.informatics.uci.edu", "www.stat.uci.edu", "www.today.uci.edu"}:
         return False
 
-    if ".today.uci.edu" in parsed.netloc and "/department/information_computer_sciences/" not in parsed.path:
-    #if parsed.netloc == "www.today.uci.edu" and parsed.path != "/department/information_computer_sciences/":
+    if parsed.netloc == "www.today.uci.edu" and parsed.path != "/department/information_computer_sciences/":
         return False
 
     if "/files/" in parsed.path or "/papers/" in parsed.path:
@@ -221,7 +219,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|rss|c|tex.Z|bib.Z)$", parsed.path.lower()):
+            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|tex.Z|bib.Z)$", parsed.path.lower()):
             # .bib? 
         return False
     return True
