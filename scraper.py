@@ -251,19 +251,20 @@ def create_simhash(resp):
     
     weightList = list()
 
-    for pos in range(160):
+    for pos in reversed(range(160)):
         # Get the weight to calculate
-        
         num = 0
+        i = 0
         for binNum in binList:
-            weight = sortFreq[wordList[pos]]
+            weight = sortFreq[wordList[i]]
             binary = binNum[pos]
             num += weight if binary == '1' else -weight
+            i += 1
     
         weightList.append(num)
 
     # Reverse list
-    weightList = reversed(weightList)
+    #weightList = reversed(weightList)
 
     #convert from weightList to the simhash
     simhash = list()
