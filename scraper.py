@@ -219,7 +219,8 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"|img|sql|odc|txt|war|apk)$", parsed.path.lower()):
+            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|tex.Z|bib.Z)$", parsed.path.lower()):
+            # .bib? 
         return False
     return True
 
