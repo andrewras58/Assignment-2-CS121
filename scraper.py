@@ -43,7 +43,7 @@ def common_words_write():
     with open("common_words_log.txt", "w") as f:
         file_string = ''
         for count, kv in enumerate(sorted(Common_Words.items(), key=(lambda x: x[1]), reverse=True)[:50]):
-            file_string += f'{count+1:02}. (Word = {kv[0]}, Word-Count = {kv[1]})\n'
+            file_string += f'{count+1:02}. {kv[0]} - {kv[1]}\n'
         f.write(file_string)
 
 #writes to a txt file the longest page along with its word count
@@ -138,12 +138,12 @@ def extract_next_links(url, resp):
     # If threshold > 0.95 the page is too similar and we should skip
     else:
         try:
-            sim = max(simililarity(simhash, s) for s in Simhashes)
+            sim = max(similarity(simhash, s) for s in Simhashes)
             if sim >= 0.95:
                 Simhashes.append(simhash)
-                blacklist.add(url)
+                Blacklist.add(url)
                 return set()
-        except:
+        except ValueError:
             Simhashes.append(simhash)
 
     if simhash not in Simhashes:
@@ -199,6 +199,9 @@ def is_valid(url):
     if parsed.netloc == "www.today.uci.edu" and parsed.path != "/department/information_computer_sciences/":
         return False
 
+    if "/files/" in parsed.path or "/papers/" in parsed.path:
+        return False
+
     # Regex expression to not allow repeating directories
     # Source: https://support.archive-it.org/hc/en-us/articles/208332963-Modify-crawl-scope-with-a-Regular-Expression
     # Note: Not yet sure if this is working or not, will need more testing
@@ -216,12 +219,12 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"|img|sql)$", parsed.path.lower()):
+            + r"|img|sql|odc|txt)$", parsed.path.lower()):
         return False
     return True
 
 
-def simililarity(hash1, hash2):
+def similarity(hash1, hash2):
     return sum(h1 == h2 for h1, h2 in zip(hash1, hash2)) / 160
 
 def create_simhash(resp):
