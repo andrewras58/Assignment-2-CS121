@@ -106,13 +106,6 @@ def compute_word_frequencies(tokens):
             Common_Words[token] += 1
 
 def extract_next_links(url, resp):
-    # url: the URL that was used to get the page
-    # resp.url: the actual url of the page
-    # resp.status: the status code returned by the server. 200 is OK, you got the page. Other numbers mean that there was some kind of problem.
-    # resp.error: when status is not 200, you can check the error here, if needed.
-    # resp.raw_response: this is where the page actually is. More specifically, the raw_response has two parts:
-    #         resp.raw_response.url: the url, again
-    #         resp.raw_response.content: the content of the page!
     global Blacklist, Visited, Robots_txt, Simhashes
 
     # If status is bad or link already visited add it to a blacklist to avoid
@@ -135,7 +128,8 @@ def extract_next_links(url, resp):
         Blacklist.add(url)
         return set()
     # Else check for similarity in all stored simhashes
-    # If threshold > 0.95 the page is too similar and we should skip
+    # If threshold > 0.95 the page is too similar and we should blacklist
+    # and skip
     else:
         try:
             sim = max(similarity(simhash, s) for s in Simhashes)
@@ -192,20 +186,39 @@ def is_valid(url):
     if parsed.scheme not in {"http", "https"}:
         return False
 
-    # Make sure link is in provided domain constraints
-    if parsed.netloc not in {"www.ics.uci.edu", "www.cs.uci.edu", "www.informatics.uci.edu", "www.stat.uci.edu", "www.today.uci.edu"}:
+    path = parsed.path
+    netloc = parsed.netloc
+    check = 0
+
+    # Make sure URL is in provided domain constraints
+    if ".ics.uci.edu" not in netloc:
+        check +=1
+    if ".cs.uci.edu" not in netloc:
+        check +=1
+    if ".informatics.uci.edu" not in netloc:
+        check +=1
+    if ".stat.uci.edu" not in netloc:
+        check +=1
+    if ".today.uci.edu" not in netloc:
+        check +=1
+
+    # Jank but it works, if check != 4 then one of the strings was not 
+    # present inside of the provided URL
+    if check != 4:
         return False
 
-    if parsed.netloc == "www.today.uci.edu" and parsed.path != "/department/information_computer_sciences/":
+    if ".today.uci.edu" in parsed.netloc and "/department/information_computer_sciences/" not in parsed.path:
         return False
 
-    if "/files/" in parsed.path or "/papers/" in parsed.path:
+    # files and papers both have links of documents
+    # not sure if useful to exclude or not yet, more testing
+    if "/files/" in parsed.path:
+        return False
+    if "/papers/" in parsed.path:
         return False
 
     # Regex expression to not allow repeating directories
     # Source: https://support.archive-it.org/hc/en-us/articles/208332963-Modify-crawl-scope-with-a-Regular-Expression
-    # Note: Not yet sure if this is working or not, will need more testing
-    # Seems to work better with 'r' than without (or work in general, not sure)
     if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path):
         return False
 
@@ -219,12 +232,12 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|tex.Z|bib.Z)$", parsed.path.lower()):
+            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|rss|c|tex.Z|bib.Z|pps|bib)$", parsed.path.lower()):
             # .bib? 
         return False
     return True
 
-
+# Calculate similarity between two webpages
 def similarity(hash1, hash2):
     return sum(h1 == h2 for h1, h2 in zip(hash1, hash2)) / 160
 
@@ -255,20 +268,20 @@ def create_simhash(resp):
     
     weightList = list()
 
+    # Calculate overall weight of each bit position and store
     for pos in reversed(range(160)):
-        # Get the weight to calculate
         num = 0
         i = 0
         for binNum in binList:
+            # get weight
             weight = sortFreq[wordList[i]]
+            # get binary bit
             binary = binNum[pos]
+            # adjust weight for position according to binary bit
             num += weight if binary == '1' else -weight
             i += 1
     
         weightList.append(num)
-
-    # Reverse list
-    #weightList = reversed(weightList)
 
     #convert from weightList to the simhash
     simhash = list()
@@ -291,7 +304,6 @@ def wordcount_check(resp):
     if len(word_tokens) < 100:
         return True
     return False
-
 
 '''
 def robots_check(resp, parsed):
