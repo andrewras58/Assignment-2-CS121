@@ -56,7 +56,7 @@ def longest_page_write():
 def subdomain_list_write():
     global Subdomain
     with open("subdomain_list.txt", "w") as f:
-        file_string = ''
+        file_string = 'Number of Subdomains (in ics.uci.edu): ' + str(len(Subdomain)) + "\n"
         for kv in sorted(Subdomain):
             file_string += f'{kv}, {Subdomain[kv]}\n'
         f.write(file_string)
@@ -68,7 +68,9 @@ def subdomain_update(url):
     if(url.find(".ics.uci.edu") == -1):
         return
     pattern = 'https?://(.*)\.ics\.uci\.edu'
-    subdomain_str = re.search(pattern, url).group(1)
+    subdomain_str = re.search(pattern, url).group(1)                        
+    if subdomain_str == 'www':
+        return                           
     Subdomain['http://' + subdomain_str + '.ics.uci.edu'] +=1
 
 def scraper(url, resp) -> list:
