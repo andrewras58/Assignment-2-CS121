@@ -41,6 +41,12 @@ def subdomain_list_write():
             file_string += f'{kv}, {Subdomain[kv]}\n'
         f.write(file_string)
 
+#writes to txt file the number of unique pages
+def unique_pages_write():
+    global Visited
+    with open("unique_pages.txt", "w") as f:
+        f.write(f'Unique pages - {len(Visited)}')
+
 #this will update subdomain dict per url
 #we do not need to check for unique url because it is used in extract_next_links
 def subdomain_update(url):
@@ -64,13 +70,14 @@ def scraper(url, resp) -> list:
         common_words_write()
         longest_page_write()
         subdomain_list_write()
+        unique_pages_write()
     return valid_links
 
 # get data from website and tokenize it taking out everything that isn't a word
 def tokenize_response(resp):
     soup = BeautifulSoup(resp.raw_response.content, "html.parser")
     tokens = nltk.tokenize.word_tokenize(soup.get_text()) # uses nltk to tokenize webpage
-    word_tokens = [t for t in tokens if not re.match(r'[\W]+', t)]
+    word_tokens = [t.lower() for t in tokens if not re.match(r'[\W]+', t)]
     return word_tokens
 
 # assign new value to Longest_Page if current page is longer
@@ -84,8 +91,20 @@ def compute_word_frequencies(tokens):
     # for loop which adds count to Common_Words dictionary
     global Common_Words, Stop_Words
     for token in tokens:
-        if token.lower() not in Stop_Words and len(token) > 2 and not token[0].isdigit():
+        if token not in Stop_Words and len(token) > 2 and not token[0].isdigit():
             Common_Words[token] += 1
+
+def repeated_sentence_check(sentence_list, threshold):
+    sentences_set = {sentence_list}
+    repeated_sentences = defaultdict(int)
+
+    for sentence in sentence_list:
+        if sentence in sentences_set:
+            repeated_sentences[sentence] += 1
+            if repeated_sentences[sentence] >= threshold:
+                return False
+    return True
+
 
 def extract_next_links(url, resp):
     global Blacklist, Visited, Robots_txt, Simhashes
@@ -95,6 +114,11 @@ def extract_next_links(url, resp):
         Blacklist.add(url)
         return set()
 
+    # Add current url to list of visited urls so we don't end up visiting already visited links
+    parsed = urlparse(url)
+    Visited.add(parsed.scheme + '://' + parsed.netloc + parsed.path)
+
+    
     subdomain_update(url) #added here so we can avoid checking if unique
 
     # If tokens < 100 dont continue checking link
@@ -125,9 +149,13 @@ def extract_next_links(url, resp):
     if simhash not in Simhashes:
         Simhashes.append(simhash)
 
-    nextLinks = set()
-
     soup = BeautifulSoup(resp.raw_response.content, "html.parser")
+    sentences = soup.getText().split(".")
+    if not repeated_sentence_check(sentences, 5):
+        Blacklist.add(url)
+        return set()
+
+    nextLinks = set()
 
     for link in soup.find_all('a'):
         href = link.attrs.get('href')
@@ -140,14 +168,11 @@ def extract_next_links(url, resp):
         # (ex #ref40, #ref45 etc of same link)
         # not sure if including '?' is necessary, need further testing
         href = href.split('#')[0]
-        href = href.split('?')[0]
+        #href = href.split('?')[0]
 
         if is_valid(href):
             nextLinks.add(href)
 
-    # Add current url to list of visited urls so we don't end up visiting already visited links
-    parsed = urlparse(url)
-    Visited.add(parsed.scheme + '://' + parsed.netloc + parsed.path)
     return nextLinks
 
 def is_valid(url):
