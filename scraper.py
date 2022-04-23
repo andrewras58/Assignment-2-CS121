@@ -95,14 +95,15 @@ def compute_word_frequencies(tokens):
             Common_Words[token] += 1
 
 def repeated_sentence_check(sentence_list, threshold):
-    sentences_set = {sentence_list}
+    sentences_set = set(sentence_list)
     repeated_sentences = defaultdict(int)
 
     for sentence in sentence_list:
         if sentence in sentences_set:
-            repeated_sentences[sentence] += 1
-            if repeated_sentences[sentence] >= threshold:
-                return False
+            if len(sentence) > 30:
+                repeated_sentences[sentence] += 1
+                if repeated_sentences[sentence] >= threshold:
+                    return False
     return True
 
 
@@ -115,8 +116,9 @@ def extract_next_links(url, resp):
         return set()
 
     # Add current url to list of visited urls so we don't end up visiting already visited links
-    parsed = urlparse(url)
-    Visited.add(parsed.scheme + '://' + parsed.netloc + parsed.path)
+    #parsed = urlparse(url)
+    #Visited.add(parsed.scheme + '://' + parsed.netloc + parsed.path + parsed.params + parsed.query)
+    Visited.add(url.split('#')[0])
 
     
     subdomain_update(url) #added here so we can avoid checking if unique
