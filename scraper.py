@@ -54,7 +54,7 @@ def subdomain_update(url):
     if(url.find(".ics.uci.edu") == -1):
         return
     pattern = 'https?://(.*)\.ics\.uci\.edu'
-    subdomain_str = re.search(pattern, url).group(1)                        
+    subdomain_str = re.search(pattern, url).group(1).lower()                        
     if subdomain_str == 'www':
         return                           
     Subdomain['http://' + subdomain_str + '.ics.uci.edu'] +=1
