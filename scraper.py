@@ -10,8 +10,8 @@ nltk.download('punkt')
 
 Blacklist = set()
 Visited = set()
-Robots_txt = {}
 Simhashes = list()
+Robots_txt = dict()
 Stop_Words = {"a","able","about","above","abst","accordance","according","accordingly","across","act","actually","added","adj","affected","affecting","affects","after","afterwards","again","against","ah","all","almost","alone","along","already","also","although","always","am","among","amongst","an","and","announce","another","any","anybody","anyhow","anymore","anyone","anything","anyway","anyways","anywhere","apparently","approximately","are","aren","arent","arise","around","as","aside","ask","asking","at","auth","available","away","awfully","b","back","be","became","because","become","becomes","becoming","been","before","beforehand","begin","beginning","beginnings","begins","behind","being","believe","below","beside","besides","between","beyond","biol","both","brief","briefly","but","by","c","ca","came","can","cannot","can't","cause","causes","certain","certainly","co","com","come","comes","contain","containing","contains","could","couldnt","d","date","did","didn't","different","do","does","doesn't","doing","done","don't","down","downwards","due","during","e","each","ed","edu","effect","eg","eight","eighty","either","else","elsewhere","end","ending","enough","especially","et","et-al","etc","even","ever","every","everybody","everyone","everything","everywher","ex","except","f","far","few","ff","fifth","first","five","fix","followed","following","follows","for","former","formerly","forth","found","four","from","further","furthermore","g","gave","get","gets","getting","give","given","gives","giving","go","goes","gone","got","gotten","h","had","happens","hardly","has","hasn't","have","haven't","having","he","hed","hence","her","here","hereafter","hereby","herein","heres","hereupon","hers","herself","hes","hi","hid","him","himself","his","hither","home","how","howbeit","however","hundred","i","id","ie","if","i'll","im","immediate","immediately","importance","important","in","inc","indeed","index","information","instead","into","invention","inward","is","isn't","it","itd","it'll","its","itself","i've","j","just","k","keep","keeps","kept","kg","km","know","known","knows","l","largely","last","lately","later","latter","latterly","least","less","lest","let","lets","like","liked","likely","line","little","'ll","look","looking","looks","ltd","m","made","mainly","make","makes","many","may","maybe","me","mean","means","meantime","meanwhile","merely","mg","might","million","miss","ml","more","moreover","most","mostly","mr","mrs","much","mug","must","my","myself","n","na","name","namely","nay","nd","near","nearly","necessarily","necessary","need","needs","neither","never","nevertheless","new","next","nine","ninety","no","nobody","non","none","nonetheless","noone","nor","normally","nos","not","noted","nothing","now","nowhere","o","obtain","obtained","obviously","of","off","often","oh","ok","okay","old","omitted","on","once","one","ones","only","onto","or","ord","other","others","otherwise","ought","our","ours","ourselves","out","outside","over","overall","owing","own","p","page","pages","part","particular","particularly","past","per","perhaps","placed","please","plus","poorly","possible","possibly","potentially","pp","predominantly","present","previously","primarily","probably","promptly","proud","provides","put","q","que","quickly","quite","qv","r","ran","rather","rd","re","readily","really","recent","recently","ref","refs","regarding","regardless","regards","related","relatively","research","respectively","resulted","resulting","results","right","run","s","said","same","saw","say","saying","says","sec","section","see","seeing","seem","seemed","seeming","seems","seen","self","selves","sent","seven","several","shall","she","shed","she'll","shes","should","shouldn't","show","showed","shown","showns","shows","significant","significantly","similar","similarly","since","six","slightly","so","some","somebody","somehow","someone","somethan","something","sometime","sometimes","somewhat","somewhere","soon","sorry","specifically","specified","specify","specifying","still","stop","strongly","sub","substantially","successfully","such","sufficiently","suggest","sup","sure","t","take","taken","taking","tell","tends","th","than","thank","thanks","thanx","that","that'll","thats","that've","the","their","theirs","them","themselves","then","thence","there","thereafter","thereby","thered","therefore","therein","there'll","thereof","therere","theres","thereto","thereupon","there've","these","they","theyd","they'll","theyre","they've","think","this","those","thou","though","thoughh","thousand","throug","through","throughout","thru","thus","til","tip","to","together","too","took","toward","towards","tried","tries","truly","try","trying","ts","twice","two","u","un","under","unfortunately","unless","unlike","unlikely","until","unto","up","upon","ups","us","use","used","useful","usefully","usefulness","uses","using","usually","v","value","various","'ve","very","via","viz","vol","vols","vs","w","want","wants","was","wasnt","way","we","wed","welcome","we'll","went","were","werent","we've","what","whatever","what'll","whats","when","whence","whenever","where","whereafter","whereas","whereby","wherein","wheres","whereupon","wherever","whether","which","while","whim","whither","who","whod","whoever","whole","who'll","whom","whomever","whos","whose","why","widely","will","willing","wish","with","within","without","wont","words","world","would","wouldnt","www","x","y","yes","yet","you","youd","you'll","your","youre","yours","yourself","yourselves","you've","z","zero"}
 Longest_Page = ('Default', 0)
 Common_Words = defaultdict(int)
@@ -60,12 +60,14 @@ def subdomain_update(url):
     Subdomain['http://' + subdomain_str + '.ics.uci.edu'] +=1
 
 def scraper(url, resp) -> list:
+    global Blacklist
     links = extract_next_links(url, resp)
     valid_links = [link for link in links if is_valid(link)]
     if resp.status == 200:
-        word_token_list = tokenize_response(resp)       # gather all tokens from webpage
-        check_longest_page(url, len(word_token_list))   # check if Longest_Page needs to be updated
-        compute_word_frequencies(word_token_list)       # find frequencies of each token and insert into Common_Words
+        if url not in Blacklist:
+            word_token_list = tokenize_response(resp)       # gather all tokens from webpage
+            check_longest_page(url, len(word_token_list))   # check if Longest_Page needs to be updated
+            compute_word_frequencies(word_token_list)       # find frequencies of each token and insert into Common_Words
         
         common_words_write()
         longest_page_write()
@@ -75,9 +77,12 @@ def scraper(url, resp) -> list:
 
 # get data from website and tokenize it taking out everything that isn't a word
 def tokenize_response(resp):
-    soup = BeautifulSoup(resp.raw_response.content, "html.parser")
-    tokens = nltk.tokenize.word_tokenize(soup.get_text()) # uses nltk to tokenize webpage
-    word_tokens = [t.lower() for t in tokens if not re.match(r'[\W]+', t)]
+    try:
+        soup = BeautifulSoup(resp.raw_response.content, "html.parser")
+        tokens = nltk.tokenize.word_tokenize(soup.get_text()) # uses nltk to tokenize webpage
+        word_tokens = [t.lower() for t in tokens if not re.match(r'[\W]+', t)]
+    except AttributeError:
+        return list()
     return word_tokens
 
 # assign new value to Longest_Page if current page is longer
@@ -108,7 +113,7 @@ def repeated_sentence_check(sentence_list, threshold):
 
 
 def extract_next_links(url, resp):
-    global Blacklist, Visited, Robots_txt, Simhashes
+    global Blacklist, Visited, Simhashes
 
     # If status is bad or link already visited add it to a blacklist to avoid
     if resp.status != 200 or url in Blacklist or url in Visited:
@@ -116,14 +121,11 @@ def extract_next_links(url, resp):
         return set()
 
     # Add current url to list of visited urls so we don't end up visiting already visited links
-    #parsed = urlparse(url)
-    #Visited.add(parsed.scheme + '://' + parsed.netloc + parsed.path + parsed.params + parsed.query)
-    Visited.add(url.split('#')[0])
+    Visited.add(url)
 
-    
     subdomain_update(url) #added here so we can avoid checking if unique
 
-    # If tokens < 100 dont continue checking link
+    # If tokens < 200 dont continue checking link
     if wordcount_check(resp):
         Blacklist.add(url)
         return set()
@@ -153,7 +155,7 @@ def extract_next_links(url, resp):
 
     soup = BeautifulSoup(resp.raw_response.content, "html.parser")
     sentences = soup.getText().split(".")
-    if not repeated_sentence_check(sentences, 5):
+    if not repeated_sentence_check(sentences, 4):
         Blacklist.add(url)
         return set()
 
@@ -168,9 +170,9 @@ def extract_next_links(url, resp):
 
         # Stop duplicates of same link by splitting
         # (ex #ref40, #ref45 etc of same link)
-        # not sure if including '?' is necessary, need further testing
         href = href.split('#')[0]
-        #href = href.split('?')[0]
+        if "swiki" in href or "evoke" in href or "archive" in href:
+            href = href.split('?')[0]
 
         if is_valid(href):
             nextLinks.add(href)
@@ -180,7 +182,6 @@ def extract_next_links(url, resp):
 def is_valid(url):
     # Decide whether to crawl this url or not.
     # If you decide to crawl it, return True; otherwise return False.
-    # There are already some conditions that return False.
     global Blacklist, Visited
 
     if url in Visited or url in Blacklist:
@@ -216,19 +217,21 @@ def is_valid(url):
     if check != 4:
         return False
 
-    if ".today.uci.edu" in parsed.netloc and "/department/information_computer_sciences/" not in parsed.path:
+    if ".today.uci.edu" in netloc and "/department/information_computer_sciences/" not in path:
         return False
 
-    # files and papers both have links of documents
-    # not sure if useful to exclude or not yet, more testing
-    if "/files/" in parsed.path:
-        return False
-    if "/papers/" in parsed.path:
+    # files, papers, and publications all just have links to uploaded documents
+    # probably a better way to filter out but don't have time to implement
+    if "/files/" in path or "/papers/" in path or "/publications/" in path:
         return False
 
     # Regex expression to not allow repeating directories
     # Source: https://support.archive-it.org/hc/en-us/articles/208332963-Modify-crawl-scope-with-a-Regular-Expression
-    if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", parsed.path):
+    if re.match(r"^.*?(/.+?/).*?\1.*$|^.*?/(.+?/)\2.*$", path):
+        return False
+
+    if re.match(
+        r".*\.(jpg|png|pfd|ps|ps\.z)", parsed.query.lower()):
         return False
 
     if re.match(
@@ -241,8 +244,7 @@ def is_valid(url):
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz"
             # Added
-            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps.Z|rss|c|tex.Z|bib.Z|pps|bib|ppsx)$", parsed.path.lower()):
-            # .bib? 
+            + r"|img|sql|odc|txt|war|apk|mpg|scm|ps\.z|rss|c|tex\.z|bib\.z|pps|bib|ppsx|ff|ma)$", parsed.path.lower()):
         return False
     return True
 
@@ -310,7 +312,7 @@ def create_simhash(resp):
 # if token count less than 100
 def wordcount_check(resp):
     word_tokens = tokenize_response(resp)
-    if len(word_tokens) < 100:
+    if len(word_tokens) < 200:
         return True
     return False
 
