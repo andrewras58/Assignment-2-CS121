@@ -1,6 +1,7 @@
 import re
 import nltk
 import hashlib
+from time import sleep
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from urllib.parse import urlparse
@@ -63,7 +64,7 @@ def subdomain_update(url):
 def scraper(url, resp) -> list:
     global Blacklist
     links = extract_next_links(url, resp)
-    valid_links = [link for link in links if robots_check(url, link) and is_valid(link)]
+    valid_links = [link for link in links if robots_check(link) and is_valid(link)]
     if resp.status == 200:
         if url not in Blacklist:
             word_token_list = tokenize_response(resp)       # gather all tokens from webpage
@@ -323,11 +324,16 @@ def wordcount_check(resp):
     return False
 
 
-def robots_check(parent_url, query_url):
+def robots_check(query_url):
     global RobotsParsers
-    parsed = urlparse(parent_url)   # parent_url holds the robots we want
+    try:
+        parsed = urlparse(query_url)   # parent_url holds the robots we want
+    except:
+        return False
+
     robot_link = parsed.scheme + '://' + parsed.netloc + '/robots.txt'
     if robot_link not in RobotsParsers:
+        sleep(0.5)      # politeness before making a request
         rp = RobotFileParser()
         rp.set_url(robot_link)
         rp.read()
