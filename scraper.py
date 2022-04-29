@@ -16,6 +16,7 @@ Stop_Words = {"a","able","about","above","abst","accordance","according","accord
 Longest_Page = ('Default', 0)
 Common_Words = defaultdict(int)
 Subdomain = defaultdict(int) # {key = Subdomains under ics.uci.edu domain, value = a counter of unique Pages}
+RobotsParsers = dict()
 
 #writes to txt file, the current 50 most common words
 def common_words_write():
@@ -323,8 +324,12 @@ def wordcount_check(resp):
 
 
 def robots_check(parent_url, query_url):
+    global RobotsParsers
     parsed = urlparse(parent_url)   # parent_url holds the robots we want
-    rp = RobotFileParser()
-    rp.set_url(parsed.scheme + '://' + parsed.netloc + '/robots.txt')
-    rp.read()
-    return rp.can_fetch("*", query_url)   # true means either the robots.txt allows crawling of the query_url or the robots.txt wasn't found
+    robot_link = parsed.scheme + '://' + parsed.netloc + '/robots.txt'
+    if robot_link not in RobotsParsers:
+        rp = RobotFileParser()
+        rp.set_url(robot_link)
+        rp.read()
+        RobotsParsers[robot_link] = rp
+    return RobotsParsers[robot_link].can_fetch("*", query_url)   # true means either the robots.txt allows crawling of the query_url or the robots.txt wasn't found
